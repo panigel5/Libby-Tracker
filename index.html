@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Libby - Baby Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+  .app { max-width: 600px; margin: 0 auto; padding: 1rem; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding: 1rem; background: #fff; border-radius: 12px; border: 0.5px solid #e0e0da; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-icon { width: 38px; height: 38px; background: #FAEEDA; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+  .header p { font-size: 12px; color: #6b6b6b; margin-top: 1px; }
+  .sync-pill { font-size: 11px; display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; border: 0.5px solid #d0d0ca; color: #6b6b6b; background: #fafaf8; white-space: nowrap; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #888; flex-shrink: 0; }
+  .sync-dot.ok { background: #639922; }
+  .sync-dot.busy { background: #EF9F27; }
+  .sync-dot.err { background: #E24B4A; }
+
+  .date-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+  .date-bar button { background: #fff; border: 0.5px solid #d0d0ca; border-radius: 8px; padding: 7px 12px; cursor: pointer; color: #6b6b6b; font-size: 14px; transition: background 0.15s; }
+  .date-bar button:hover { background: #f0f0ec; }
+  .date-label { flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .today-btn { font-size: 11px !important; padding: 5px 12px !important; border-radius: 20px !important; }
+
+  .nav-tabs { display: flex; margin-bottom: 1rem; background: #fff; border: 0.5px solid #d0d0ca; border-radius: 10px; overflow: hidden; }
+  .nav-tab { flex: 1; padding: 9px 4px; font-size: 12px; cursor: pointer; background: transparent; color: #6b6b6b; border: none; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 4px; font-family: inherit; }
+  .nav-tab + .nav-tab { border-left: 0.5px solid #d0d0ca; }
+  .nav-tab.active { background: #f0f0ec; color: #1a1a1a; font-weight: 600; }
+
+  .category-tabs { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab { padding: 6px 12px; border-radius: 20px; border: 0.5px solid #d0d0ca; font-size: 13px; cursor: pointer; background: #fff; color: #6b6b6b; transition: all 0.15s; font-family: inherit; }
+  .tab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .form-card { background: #fff; border: 0.5px solid #e0e0da; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .form-title { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .field-row.single { grid-template-columns: 1fr; }
+  .field label { display: block; font-size: 12px; color: #6b6b6b; margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea { width: 100%; font-size: 14px; padding: 8px 10px; border: 0.5px solid #d0d0ca; border-radius: 8px; background: #fafaf8; color: #1a1a1a; font-family: inherit; outline: none; transition: border-color 0.15s; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: #888; }
+  .field textarea { height: 64px; resize: none; }
+
+  .btn-group { display: flex; gap: 6px; margin-bottom: 10px; }
+  .btn-option { flex: 1; padding: 9px 6px; border-radius: 8px; border: 0.5px solid #d0d0ca; background: #fafaf8; color: #6b6b6b; font-size: 13px; cursor: pointer; text-align: center; transition: all 0.15s; font-family: inherit; }
+  .btn-option.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .log-btn { width: 100%; padding: 11px; background: #1a1a1a; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; margin-top: 4px; transition: all 0.15s; font-family: inherit; }
+  .log-btn:hover { background: #333; }
+  .log-btn:active { transform: scale(0.98); }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+  .stat-card { background: #fff; border: 0.5px solid #e0e0da; border-radius: 10px; padding: 12px 8px; text-align: center; }
+  .stat-card .val { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+  .stat-card .lbl { font-size: 11px; color: #6b6b6b; margin-top: 2px; }
+
+  .entry { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid #e8e8e2; }
+  .entry:last-child { border-bottom: none; }
+  .entry-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .entry-body { flex: 1; }
+  .entry-title { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .entry-sub { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
+  .entry-time { font-size: 11px; color: #aaa; white-space: nowrap; padding-top: 2px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #6b6b6b; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .tl-wrap { position: relative; padding-left: 52px; }
+  .tl-axis { position: absolute; left: 52px; top: 0; bottom: 0; width: 1px; background: #e0e0da; }
+  .tl-row { display: flex; align-items: flex-start; position: relative; }
+  .tl-time { position: absolute; left: -52px; width: 44px; text-align: right; font-size: 11px; color: #aaa; padding-top: 5px; }
+  .tl-dot { position: absolute; left: -5.5px; width: 11px; height: 11px; border-radius: 50%; margin-top: 5px; }
+  .tl-card { margin-left: 16px; margin-bottom: 8px; background: #fff; border: 0.5px solid #e0e0da; border-radius: 8px; padding: 8px 12px; flex: 1; }
+  .tl-card-title { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+  .tl-card-sub { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
+  .tl-sleep { margin-left: 16px; margin-bottom: 8px; background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: 8px; padding: 8px 12px; flex: 1; display: flex; align-items: center; gap: 8px; }
+  .section-head { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 0 4px 16px; }
+
+  .warn-banner { background: #FFF8E6; color: #7a5800; border: 0.5px solid #FAC775; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; }
+  .sleep-banner { background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #185FA5; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .empty { font-size: 14px; color: #aaa; text-align: center; padding: 2.5rem 0; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a1a1a; color: #fff; border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 600; transition: transform 0.25s; pointer-events: none; z-index: 1000; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) {
+    .app { padding: 0.75rem; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon">🍼</div>
+      <div>
+        <h1>Libby</h1>
+        <p id="header-sub">Loading...</p>
+      </div>
+    </div>
+    <div class="sync-pill">
+      <div class="sync-dot busy" id="sync-dot"></div>
+      <span id="sync-label">Connecting</span>
+    </div>
+  </div>
+
+  <div id="warn-area"></div>
+
+  <div class="date-bar">
+    <button onclick="changeDay(-1)">&#8249;</button>
+    <span class="date-label" id="date-label"></span>
+    <button onclick="changeDay(1)">&#8250;</button>
+    <button class="today-btn" onclick="goToday()">Today</button>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="nav-log" onclick="switchView('log')">&#43; Log</button>
+    <button class="nav-tab" id="nav-timeline" onclick="switchView('timeline')">Timeline</button>
+    <button class="nav-tab" id="nav-summary" onclick="switchView('summary')">Summary</button>
+  </div>
+
+  <!-- LOG VIEW -->
+  <div id="view-log">
+    <div class="category-tabs">
+      <button class="tab active" onclick="showTab('feed')">&#128371; Feed</button>
+      <button class="tab" onclick="showTab('sleep')">&#127769; Sleep</button>
+      <button class="tab" onclick="showTab('nappy')">&#9851; Nappy</button>
+      <button class="tab" onclick="showTab('mood')">&#128512; Mood</button>
+      <button class="tab" onclick="showTab('note')">&#128203; Note</button>
+      <button class="tab" onclick="showTab('entries')">&#9776; All logs</button>
+    </div>
+
+    <div id="panel-feed" class="form-card">
+      <div class="form-title">Log a feed</div>
+      <div class="field-row">
+        <div class="field"><label>Time</label><input type="time" id="feed-time"></div>
+        <div class="field"><label>Type</label><select id="feed-type"><option>Breast milk</option><option>Formula</option><option>Solid food</option><option>Water / juice</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Amount / portion</label><input type="text" id="feed-amount" placeholder="e.g. 120ml"></div>
+        <div class="field"><label>Food (optional)</label><input type="text" id="feed-food" placeholder="e.g. banana puree"></div>
+      </div>
+      <div class="field-row single"><div class="field"><label>Notes (optional)</label><textarea id="feed-notes" placeholder="How did it go?"></textarea></div></div>
+      <button class="log-btn" onclick="logFeed()">Log feed</button>
+    </div>
+
+    <div id="panel-sleep" class="form-card" style="display:none">
+      <div class="form-title">Log sleep</div>
+      <div id="sleep-banner-el"></div>
+      <div class="btn-group">
+        <button class="btn-option selected" id="sleep-btn-down" onclick="selectSleepAction('down')">Went to sleep</button>
+        <button class="btn-option" id="sleep-btn-up" onclick="selectSleepAction('up')">Woke up</button>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Time</label><input type="time" id="sleep-time"></div>
+        <div class="field"><label>Location (optional)</label>
+          <select id="sleep-location"><option value="">Select...</option><option>Cot</option><option>Pram</option><option>Car seat</option><option>Arms / carrier</option><option>Sofa</option></select>
+        </div>
+      </div>
+      <div class="field-row single"><div class="field"><label>Notes (optional)</label><textarea id="sleep-notes"></textarea></div></div>
+      <button class="log-btn" onclick="logSleep()">Log sleep</button>
+    </div>
+
+    <div id="panel-nappy" class="form-card" style="display:none">
+      <div class="form-title">Log nappy change</div>
+      <div class="btn-group">
+        <button class="btn-option selected" id="nappy-btn-1" onclick="selectNappy('1')">Wee only</button>
+        <button class="btn-option" id="nappy-btn-2" onclick="selectNappy('2')">Poo</button>
+        <button class="btn-option" id="nappy-btn-both" onclick="selectNappy('both')">Both</button>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Time</label><input type="time" id="nappy-time"></div>
+        <div class="field"><label>Consistency (optional)</label>
+          <select id="nappy-consistency"><option value="">Select...</option><option>Normal</option><option>Loose</option><option>Watery</option><option>Hard</option><option>Mucousy</option></select>
+        </div>
+      </div>
+      <div class="field-row single"><div class="field"><label>Notes (optional)</label><textarea id="nappy-notes" placeholder="Any rash, unusual colour, etc."></textarea></div></div>
+      <button class="log-btn" onclick="logNappy()">Log nappy</button>
+    </div>
+
+    <div id="panel-mood" class="form-card" style="display:none">
+      <div class="form-title">Log mood</div>
+      <div class="btn-group">
+        <button class="btn-option selected" id="mood-btn-happy" onclick="selectMood('happy')">Happy</button>
+        <button class="btn-option" id="mood-btn-fussy" onclick="selectMood('fussy')">Fussy</button>
+        <button class="btn-option" id="mood-btn-crying" onclick="selectMood('crying')">Crying</button>
+        <button class="btn-option" id="mood-btn-calm" onclick="selectMood('calm')">Calm</button>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Time</label><input type="time" id="mood-time"></div>
+        <div class="field"><label>Activity (optional)</label>
+          <select id="mood-activity"><option value="">Select...</option><option>Tummy time</option><option>Bath time</option><option>Playtime</option><option>Walk / outing</option><option>Quiet time</option></select>
+        </div>
+      </div>
+      <div class="field-row single"><div class="field"><label>Notes (optional)</label><textarea id="mood-notes"></textarea></div></div>
+      <button class="log-btn" onclick="logMood()">Log mood</button>
+    </div>
+
+    <div id="panel-note" class="form-card" style="display:none">
+      <div class="form-title">Quick note</div>
+      <div class="field-row">
+        <div class="field"><label>Time</label><input type="time" id="note-time"></div>
+        <div class="field"><label>Category</label>
+          <select id="note-category"><option>General</option><option>Health / medicine</option><option>Milestone</option><option>Observation</option><option>Reminder for parents</option></select>
+        </div>
+      </div>
+      <div class="field-row single"><div class="field"><label>Note</label><textarea id="note-text" style="height:80px" placeholder="Anything worth remembering..."></textarea></div></div>
+      <button class="log-btn" onclick="logNote()">Save note</button>
+    </div>
+
+    <div id="panel-entries" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <span style="font-size:13px;font-weight:600;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.05em;">All logs</span>
+        <button onclick="loadEntries()" style="font-size:12px;color:#6b6b6b;background:none;border:none;cursor:pointer;font-family:inherit;">Refresh</button>
+      </div>
+      <div id="log-feed"></div>
+    </div>
+  </div>
+
+  <!-- TIMELINE VIEW -->
+  <div id="view-timeline" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
+      <button onclick="loadEntries()" style="font-size:12px;color:#6b6b6b;background:none;border:none;cursor:pointer;font-family:inherit;">Refresh</button>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#EF9F27"></div> Feed</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#378ADD"></div> Sleep</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#639922"></div> Nappy</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#D4537E"></div> Mood</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#888780"></div> Note</div>
+    </div>
+    <div id="timeline-content"></div>
+  </div>
+
+  <!-- SUMMARY VIEW -->
+  <div id="view-summary" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
+      <button onclick="loadEntries()" style="font-size:12px;color:#6b6b6b;background:none;border:none;cursor:pointer;font-family:inherit;">Refresh</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="val" id="stat-feeds">0</div><div class="lbl">feeds</div></div>
+      <div class="stat-card"><div class="val" id="stat-sleep">-</div><div class="lbl">sleep</div></div>
+      <div class="stat-card"><div class="val" id="stat-nappies">0</div><div class="lbl">nappies</div></div>
+      <div class="stat-card"><div class="val" id="stat-entries">0</div><div class="lbl">total logs</div></div>
+    </div>
+    <div id="summary-cards"></div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyToXtQnYyt5PRKiiEEMoIiX1TXWULzf4PZUDDzrNdSB4-DesfVbN5PgkHh4azdmr6t/exec';
+
+const tColors = { feed:'#EF9F27', sleep:'#378ADD', nappy:'#639922', mood:'#D4537E', note:'#888780' };
+const tEmoji  = { feed:'🍼', sleep:'🌙', nappy:'♻', mood:'😊', note:'📋' };
+const tIBg    = { feed:'#FAC775', sleep:'#B5D4F4', nappy:'#C0DD97', mood:'#F4C0D1', note:'#D3D1C7' };
+const tIFg    = { feed:'#633806', sleep:'#0C447C', nappy:'#27500A', mood:'#72243E', note:'#444441' };
+
+let allEntries = [], currentDate = todayStr();
+let sleepAction = 'down', nappyType = '1', moodType = 'happy';
+let currentView = 'log', activeSleep = null, saving = false;
+
+function todayStr() { const d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function pad(n) { return String(n).padStart(2,'0'); }
+function nowTime() { const d = new Date(); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function timeToMins(t) { if(!t) return 0; const [h,m] = t.split(':').map(Number); return h*60+m; }
+function minsToStr(m) { const h=Math.floor(m/60),r=m%60; return h>0&&r>0?h+'h '+r+'m':h>0?h+'h':r+'m'; }
+function calcDur(a,b) { const d=timeToMins(b)-timeToMins(a); return d>0?minsToStr(d):null; }
+
+function setSyncStatus(state, msg) {
+  document.getElementById('sync-label').textContent = msg;
+  document.getElementById('sync-dot').className = 'sync-dot ' + (state==='ok'?'ok':state==='busy'?'busy':'err');
+}
+function showWarn(msg) {
+  document.getElementById('warn-area').innerHTML = msg ? `<div class="warn-banner">${msg}</div>` : '';
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function formatDateLabel(ds) {
+  const [y,m,d] = ds.split('-').map(Number);
+  const date = new Date(y, m-1, d);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((date-today)/86400000);
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const base = days[date.getDay()]+' '+d+' '+months[m-1];
+  if(diff===0) return 'Today - '+base;
+  if(diff===-1) return 'Yesterday - '+base;
+  return base+' '+y;
+}
+function updateDateLabel() {
+  const l = formatDateLabel(currentDate);
+  document.getElementById('date-label').textContent = l;
+  document.getElementById('header-sub').textContent = l;
+}
+function changeDay(delta) {
+  const [y,m,d] = currentDate.split('-').map(Number);
+  const nd = new Date(y, m-1, d+delta);
+  currentDate = nd.getFullYear()+'-'+pad(nd.getMonth()+1)+'-'+pad(nd.getDate());
+  updateDateLabel(); updateActiveSleep(); renderAll();
+}
+function goToday() { currentDate = todayStr(); updateDateLabel(); updateActiveSleep(); renderAll(); }
+function dayEntries() { return allEntries.filter(e=>e.date===currentDate).sort((a,b)=>timeToMins(a.time)-timeToMins(b.time)); }
+
+function updateActiveSleep() {
+  const de = dayEntries();
+  const downs = de.filter(e=>e.type==='sleep'&&e.sleepType==='down').sort((a,b)=>timeToMins(b.time)-timeToMins(a.time));
+  const ups = de.filter(e=>e.type==='sleep'&&e.sleepType==='up');
+  activeSleep = null;
+  for(const d of downs) { if(!ups.some(u=>timeToMins(u.time)>timeToMins(d.time))) { activeSleep=d; break; } }
+  const el = document.getElementById('sleep-banner-el');
+  if(el && activeSleep) {
+    const elapsed = Math.max(0, timeToMins(nowTime())-timeToMins(activeSleep.time));
+    el.innerHTML = `<div class="sleep-banner">🌙 Sleeping since ${activeSleep.time} - ${minsToStr(elapsed)} so far</div>`;
+  } else if(el) { el.innerHTML = ''; }
+}
+
+async function loadEntries() {
+  setSyncStatus('busy','Loading...');
+  try {
+    const r = await fetch(SCRIPT_URL + '?action=read');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+    const rows = data.values || [];
+    allEntries = rows.length <= 1 ? [] : rows.slice(1).map(r => {
+      // Date: Google returns ISO timestamp like 2026-05-14T23:00:00.000Z
+      // We add 1 day offset compensation since Google stores date as midnight UTC
+      const rawDate = String(r[0]||'').trim();
+      let normDate = rawDate.slice(0,10);
+      if(rawDate.includes('T')) {
+        // Parse and shift to local date
+        const d = new Date(rawDate);
+        d.setDate(d.getDate()+1); // compensate for UTC offset
+        normDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      }
+      // Time: Google returns 1899-12-30T19:04:00.000Z for time-only cells
+      const rawTime = String(r[1]||'').trim();
+      let normTime = rawTime;
+      if(rawTime.includes('T')) {
+        const d = new Date(rawTime);
+        normTime = String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');
+      } else if(rawTime.includes(':')) {
+        normTime = rawTime.split(':')[0].padStart(2,'0')+':'+rawTime.split(':')[1].padStart(2,'0');
+      }
+      return {
+        date: normDate, time: normTime, type: String(r[2]||'').trim(),
+        title: r[3]||'', sub: r[4]||'', sleepType: r[5]||'', dur: r[6]||''
+      };
+    }).filter(e=>e.date&&e.time&&e.type);
+    setSyncStatus('ok','Live - '+allEntries.length+' entries');
+    showWarn('Today: '+currentDate+' | Dates in sheet: '+[...new Set(allEntries.map(e=>e.date))].join(', '));
+    updateActiveSleep();
+    renderAll();
+  } catch(e) {
+    setSyncStatus('err','Sync error');
+    showWarn('Could not load entries: '+e.message);
+    renderAll();
+  }
+}
+
+async function appendRow(row) {
+  if(saving) return;
+  saving = true;
+  setSyncStatus('busy','Saving...');
+  try {
+    const url = SCRIPT_URL + '?action=append&row=' + encodeURIComponent(JSON.stringify(row));
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+    if(!data.ok) throw new Error('Script error');
+    setSyncStatus('ok','Saved');
+    showWarn('');
+    showToast('Logged at ' + row[1]);
+    await loadEntries();
+  } catch(e) {
+    setSyncStatus('err','Save failed');
+    showWarn('Could not save: '+e.message);
+  } finally { saving = false; }
+}
+
+function renderAll() {
+  renderLog();
+  if(currentView==='timeline') renderTimeline();
+  if(currentView==='summary') renderSummary();
+  updateStats();
+}
+
+function renderLog() {
+  const el = document.getElementById('log-feed'); if(!el) return;
+  const entries = dayEntries();
+  if(!entries.length) { el.innerHTML='<p class="empty">No logs for this day yet.</p>'; return; }
+  el.innerHTML = entries.map(e => `
+    <div class="entry">
+      <div class="entry-icon" style="background:${tIBg[e.type]||'#D3D1C7'};color:${tIFg[e.type]||'#444'}">${tEmoji[e.type]||'📋'}</div>
+      <div class="entry-body">
+        <div class="entry-title">${e.title}</div>
+        ${e.sub ? '<div class="entry-sub">'+e.sub+'</div>' : ''}
+      </div>
+      <span class="entry-time">${e.time}</span>
+    </div>`).join('');
+}
+
+function updateStats() {
+  const entries = dayEntries();
+  document.getElementById('stat-feeds').textContent = entries.filter(e=>e.type==='feed').length;
+  document.getElementById('stat-nappies').textContent = entries.filter(e=>e.type==='nappy').length;
+  document.getElementById('stat-entries').textContent = entries.length;
+  let totalMins = 0;
+  entries.filter(e=>e.type==='sleep'&&e.sleepType==='up'&&e.dur).forEach(e => {
+    const m = e.dur.match(/(\d+)h\s+(\d+)m|(\d+)h$|(\d+)m$/);
+    if(m) { if(m[1]) totalMins+=parseInt(m[1])*60+parseInt(m[2]); else if(m[3]) totalMins+=parseInt(m[3])*60; else if(m[4]) totalMins+=parseInt(m[4]); }
+  });
+  document.getElementById('stat-sleep').textContent = totalMins > 0 ? minsToStr(totalMins) : '—';
+}
+
+function renderTimeline() {
+  const el = document.getElementById('timeline-content');
+  const entries = dayEntries();
+  if(!entries.length) { el.innerHTML='<p class="empty">No entries for this day.</p>'; return; }
+  const grouped = {};
+  entries.forEach(e => { const h=e.time.split(':')[0]; if(!grouped[h]) grouped[h]=[]; grouped[h].push(e); });
+  let html = '<div class="tl-wrap"><div class="tl-axis"></div>';
+  Object.keys(grouped).sort().forEach(h => {
+    const hr = parseInt(h);
+    const lbl = hr===0?'12am':hr<12?hr+'am':hr===12?'12pm':(hr-12)+'pm';
+    html += `<div class="section-head">${lbl}</div>`;
+    grouped[h].forEach(e => {
+      if(e.type==='sleep' && e.sleepType==='down') {
+        const up = entries.find(x=>x.type==='sleep'&&x.sleepType==='up'&&timeToMins(x.time)>timeToMins(e.time));
+        html += `<div class="tl-row"><span class="tl-time">${e.time}</span><div class="tl-dot" style="background:#378ADD"></div>
+          <div class="tl-sleep">
+            <span style="font-size:14px">🌙</span>
+            <span style="font-size:13px;font-weight:600;color:#0C447C">Sleeping</span>
+            <span style="font-size:11px;color:#185FA5;margin-left:auto">${e.time} - ${up?up.time:'ongoing'}${up&&up.dur?' ('+up.dur+')':''}</span>
+          </div></div>`;
+      } else if(e.type==='sleep' && e.sleepType==='up') {
+        html += `<div class="tl-row"><span class="tl-time">${e.time}</span><div class="tl-dot" style="background:#85B7EB"></div>
+          <div class="tl-card"><div class="tl-card-title" style="color:#185FA5">${e.title}</div>${e.sub?'<div class="tl-card-sub">'+e.sub+'</div>':''}</div></div>`;
+      } else {
+        html += `<div class="tl-row"><span class="tl-time">${e.time}</span><div class="tl-dot" style="background:${tColors[e.type]||'#888'}"></div>
+          <div class="tl-card">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:8px;height:8px;border-radius:50%;background:${tColors[e.type]};flex-shrink:0"></div>
+              <div class="tl-card-title">${e.title}</div>
+            </div>
+            ${e.sub?'<div class="tl-card-sub" style="margin-left:14px">'+e.sub+'</div>':''}
+          </div></div>`;
+      }
+    });
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderSummary() {
+  const el = document.getElementById('summary-cards');
+  const entries = dayEntries();
+  const feeds = entries.filter(e=>e.type==='feed');
+  const nappies = entries.filter(e=>e.type==='nappy');
+  const moods = entries.filter(e=>e.type==='mood');
+  const notes = entries.filter(e=>e.type==='note');
+  const downs = entries.filter(e=>e.type==='sleep'&&e.sleepType==='down');
+  const ups = entries.filter(e=>e.type==='sleep'&&e.sleepType==='up');
+  const pairs = downs.map(d=>({down:d, up:ups.find(u=>timeToMins(u.time)>timeToMins(d.time))}));
+  let html = '';
+  if(feeds.length) {
+    html += `<div class="form-card"><div class="form-title">🍼 Feeds (${feeds.length})</div>`;
+    html += feeds.map(e=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #e8e8e2;font-size:13px;"><span>${e.title}</span><span style="color:#6b6b6b">${e.time}</span></div>`).join('');
+    html += '</div>';
+  }
+  if(pairs.length) {
+    html += `<div class="form-card"><div class="form-title">🌙 Sleep sessions</div>`;
+    html += pairs.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #e8e8e2;font-size:13px;"><span>${p.down.time} - ${p.up?p.up.time:'ongoing'}</span><span style="color:#6b6b6b">${p.up&&p.up.dur?p.up.dur:'in progress'}</span></div>`).join('');
+    if(activeSleep) html += `<div style="font-size:12px;color:#185FA5;padding-top:6px;">Currently sleeping since ${activeSleep.time}</div>`;
+    html += '</div>';
+  }
+  if(nappies.length) {
+    const wee = nappies.filter(e=>e.title.includes('Wee only')).length;
+    const poo = nappies.filter(e=>!e.title.includes('Wee only')).length;
+    html += `<div class="form-card"><div class="form-title">♻ Nappies (${nappies.length})</div>
+      <div style="display:flex;gap:16px;font-size:13px;padding-bottom:8px;color:#6b6b6b">${wee} wee-only &nbsp; ${poo} with poo</div>`;
+    html += nappies.map(e=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:0.5px solid #e8e8e2;font-size:13px;"><span>${e.title}</span><span style="color:#6b6b6b">${e.time}</span></div>`).join('');
+    html += '</div>';
+  }
+  if(moods.length||notes.length) {
+    html += `<div class="form-card"><div class="form-title">📋 Notes & mood</div>`;
+    [...moods,...notes].sort((a,b)=>timeToMins(a.time)-timeToMins(b.time)).forEach(e => {
+      html += `<div style="padding:6px 0;border-bottom:0.5px solid #e8e8e2;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="font-weight:600">${e.title}</span><span style="color:#6b6b6b">${e.time}</span></div>
+        ${e.sub?'<div style="font-size:12px;color:#6b6b6b;margin-top:2px;">'+e.sub+'</div>':''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+  if(!html) html = '<p class="empty">No entries for this day.</p>';
+  el.innerHTML = html;
+}
+
+function switchView(v) {
+  currentView = v;
+  ['log','timeline','summary'].forEach(x => {
+    document.getElementById('view-'+x).style.display = x===v ? '' : 'none';
+    document.getElementById('nav-'+x).classList.toggle('active', x===v);
+  });
+  if(v==='timeline') renderTimeline();
+  if(v==='summary') renderSummary();
+}
+
+function showTab(tab) {
+  ['feed','sleep','nappy','mood','note','entries'].forEach(t => {
+    const p = document.getElementById('panel-'+t); if(p) p.style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('.category-tabs .tab').forEach((el,i) => {
+    el.classList.toggle('active', ['feed','sleep','nappy','mood','note','entries'][i]===tab);
+  });
+  if(tab!=='entries') { const ti=document.getElementById(tab+'-time'); if(ti&&!ti.value) ti.value=nowTime(); }
+  if(tab==='sleep') updateActiveSleep();
+}
+
+function selectSleepAction(a) { sleepAction=a; ['down','up'].forEach(v=>document.getElementById('sleep-btn-'+v).classList.toggle('selected',v===a)); }
+function selectNappy(t) { nappyType=t; ['1','2','both'].forEach(v=>document.getElementById('nappy-btn-'+v).classList.toggle('selected',v===t)); }
+function selectMood(m) { moodType=m; ['happy','fussy','crying','calm'].forEach(v=>document.getElementById('mood-btn-'+v).classList.toggle('selected',v===m)); }
+
+async function logFeed() {
+  const time=document.getElementById('feed-time').value||nowTime();
+  const type=document.getElementById('feed-type').value;
+  const amount=document.getElementById('feed-amount').value;
+  const food=document.getElementById('feed-food').value;
+  const notes=document.getElementById('feed-notes').value;
+  await appendRow([currentDate,time,'feed',type+(amount?' · '+amount:''),[food,notes].filter(Boolean).join(' · '),'','']);
+  document.getElementById('feed-amount').value=''; document.getElementById('feed-food').value='';
+  document.getElementById('feed-notes').value=''; document.getElementById('feed-time').value='';
+}
+async function logSleep() {
+  const time=document.getElementById('sleep-time').value||nowTime();
+  const loc=document.getElementById('sleep-location').value;
+  const notes=document.getElementById('sleep-notes').value;
+  const sub=[loc,notes].filter(Boolean).join(' · ');
+  let title='Went to sleep', dur='';
+  if(sleepAction==='up') { title='Woke up'; if(activeSleep){const d=calcDur(activeSleep.time,time);if(d){dur=d;title='Woke up after '+d;}}}
+  await appendRow([currentDate,time,'sleep',title,sub,sleepAction,dur]);
+  document.getElementById('sleep-time').value=''; document.getElementById('sleep-notes').value=''; document.getElementById('sleep-location').value='';
+}
+async function logNappy() {
+  const time=document.getElementById('nappy-time').value||nowTime();
+  const con=document.getElementById('nappy-consistency').value;
+  const notes=document.getElementById('nappy-notes').value;
+  const labels={'1':'Wee only','2':'Poo','both':'Wee & poo'};
+  await appendRow([currentDate,time,'nappy','Nappy · '+labels[nappyType],[con,notes].filter(Boolean).join(' · '),'','']);
+  document.getElementById('nappy-time').value=''; document.getElementById('nappy-notes').value=''; document.getElementById('nappy-consistency').value='';
+}
+async function logMood() {
+  const time=document.getElementById('mood-time').value||nowTime();
+  const act=document.getElementById('mood-activity').value;
+  const notes=document.getElementById('mood-notes').value;
+  const labels={happy:'Happy',fussy:'Fussy',crying:'Crying',calm:'Calm'};
+  await appendRow([currentDate,time,'mood',labels[moodType],[act,notes].filter(Boolean).join(' · '),'','']);
+  document.getElementById('mood-time').value=''; document.getElementById('mood-notes').value=''; document.getElementById('mood-activity').value='';
+}
+async function logNote() {
+  const time=document.getElementById('note-time').value||nowTime();
+  const cat=document.getElementById('note-category').value;
+  const text=document.getElementById('note-text').value;
+  if(!text.trim()) return;
+  await appendRow([currentDate,time,'note',cat,text,'','']);
+  document.getElementById('note-time').value=''; document.getElementById('note-text').value='';
+}
+
+updateDateLabel();
+loadEntries();
+setInterval(() => loadEntries(), 30000);
+</script>
+</body>
+</html>
